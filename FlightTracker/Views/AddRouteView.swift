@@ -91,5 +91,7 @@ private struct AirportField: View {
 }
 
 #Preview {
-    AddRouteView().environment(TrackerStore())
+    AddRouteView()
+        .environment(TrackerStore())
+        .environment(Settings())
 }

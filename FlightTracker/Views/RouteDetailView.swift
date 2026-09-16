@@ -4,11 +4,19 @@ struct RouteDetailView: View {
     @Environment(TrackerStore.self) private var store
     let routeID: UUID
 
+    @State private var isLoggingPrice = false
+
     var body: some View {
         if let route = store.route(withID: routeID) {
             List {
                 Section {
                     currentPrice(for: route)
+                }
+
+                if let insights = route.insights {
+                    Section("What your archive says") {
+                        InsightsCard(route: route, insights: insights)
+                    }
                 }
 
                 if route.quotes.count > 1 {
@@ -64,11 +72,22 @@ struct RouteDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Check now", systemImage: "arrow.clockwise") {
-                        Task { await store.refresh(routeID) }
+                    Menu {
+                        Button("Check now", systemImage: "arrow.clockwise") {
+                            Task { await store.refresh(routeID) }
+                        }
+                        .disabled(store.refreshingRouteIDs.contains(routeID))
+
+                        Button("Log a price I saw", systemImage: "square.and.pencil") {
+                            isLoggingPrice = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
-                    .disabled(store.refreshingRouteIDs.contains(routeID))
                 }
+            }
+            .sheet(isPresented: $isLoggingPrice) {
+                LogPriceView(routeID: routeID)
             }
         } else {
             ContentUnavailableView(

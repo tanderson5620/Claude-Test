@@ -9,7 +9,7 @@ final class TrackerStore {
     private(set) var refreshingRouteIDs: Set<UUID> = []
     var errorMessage: String?
 
-    private let provider: PriceProvider
+    private var provider: PriceProvider
     private let fileURL: URL
 
     var isRefreshing: Bool { !refreshingRouteIDs.isEmpty }
@@ -21,6 +21,11 @@ final class TrackerStore {
         self.provider = provider
         self.fileURL = fileURL
         load()
+    }
+
+    /// Swap the fare source at runtime, e.g. after the user enters an API key.
+    func useProvider(_ provider: PriceProvider) {
+        self.provider = provider
     }
 
     // MARK: - Editing
@@ -44,6 +49,46 @@ final class TrackerStore {
 
     func route(withID id: UUID) -> TrackedRoute? {
         routes.first { $0.id == id }
+    }
+
+    /// Record a fare the user saw somewhere else (Google Flights, an airline
+    /// site) so the history stays complete without spending an API search.
+    func logPrice(_ price: Decimal, airline: String, for routeID: UUID, at date: Date = .now) {
+        guard let index = routes.firstIndex(where: { $0.id == routeID }) else { return }
+        let trimmed = airline.trimmingCharacters(in: .whitespaces)
+        routes[index].quotes.append(
+            PriceQuote(
+                price: price,
+                airline: trimmed.isEmpty ? "Logged by hand" : trimmed,
+                checkedAt: date
+            )
+        )
+        routes[index].quotes.sort { $0.checkedAt < $1.checkedAt }
+        save()
+    }
+
+    /// Everything tracked, as CSV, so the archive is yours to keep.
+    func exportCSV() -> String {
+        var lines = ["route,depart,return,checked_at,price,currency,airline"]
+        let stamp = ISO8601DateFormatter()
+        let day = DateFormatter()
+        day.locale = Locale(identifier: "en_US_POSIX")
+        day.dateFormat = "yyyy-MM-dd"
+
+        for route in routes {
+            for quote in route.quotes.sorted(by: { $0.checkedAt < $1.checkedAt }) {
+                lines.append([
+                    "\(route.origin)-\(route.destination)",
+                    day.string(from: route.departureDate),
+                    route.returnDate.map(day.string(from:)) ?? "",
+                    stamp.string(from: quote.checkedAt),
+                    "\(quote.price)",
+                    route.currencyCode,
+                    quote.airline.replacingOccurrences(of: ",", with: " ")
+                ].joined(separator: ","))
+            }
+        }
+        return lines.joined(separator: "\n")
     }
 
     // MARK: - Price refresh

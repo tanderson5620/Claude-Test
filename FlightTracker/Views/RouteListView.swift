@@ -3,6 +3,7 @@ import SwiftUI
 struct RouteListView: View {
     @Environment(TrackerStore.self) private var store
     @State private var isAddingRoute = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         @Bindable var store = store
@@ -27,6 +28,11 @@ struct RouteListView: View {
             .navigationTitle("Fare Watch")
             .navigationDestination(for: UUID.self) { RouteDetailView(routeID: $0) }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Settings", systemImage: "gearshape") {
+                        isShowingSettings = true
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Track a route", systemImage: "plus") {
                         isAddingRoute = true
@@ -35,6 +41,14 @@ struct RouteListView: View {
             }
             .sheet(isPresented: $isAddingRoute) {
                 AddRouteView()
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !store.routes.isEmpty {
+                    FareSourceBanner()
+                }
             }
             .alert(
                 "Something went wrong",
@@ -120,6 +134,27 @@ struct PriceChangeLabel: View {
     }
 }
 
+/// Keeps it obvious whether the numbers on screen are real.
+private struct FareSourceBanner: View {
+    @Environment(Settings.self) private var settings
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: settings.effectiveSource == .live ? "antenna.radiowaves.left.and.right" : "wand.and.stars")
+            Text(settings.effectiveSource == .live
+                 ? "Live Google Flights fares"
+                 : "Simulated fares — add a SerpAPI key in Settings")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+    }
+}
+
 #Preview {
-    RouteListView().environment(TrackerStore())
+    RouteListView()
+        .environment(TrackerStore())
+        .environment(Settings())
 }
