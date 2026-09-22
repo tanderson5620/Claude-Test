@@ -1,0 +1,1746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fare Watch</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Fare Watch">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Tracks the cheapest nonstop window for your routes.">
+</head>
+<body>
+<style>
+  /* This page deliberately commits to one visual world — the bright, white
+     look of the design it was asked to match — so it does not follow the
+     viewer's dark theme. Every colour is painted explicitly. */
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --tile: #f4f5f7;
+    --tile-2: #e8eaee;
+    --ink: #0e1116;
+    --ink-2: #6b7280;
+    --ink-3: #9ca3af;
+    --line: #e9eaee;
+    --crimson: #e5173f;
+    --crimson-soft: #fdeaee;
+    --violet: #7c5ce6;
+    --violet-2: #a78bfa;
+    --violet-soft: #f1ecfe;
+    --good: #12916b;
+    --good-soft: #e3f4ee;
+    --bad: #d4452c;
+    --bad-soft: #fcebe7;
+    --on-accent: #ffffff;
+    --grad: linear-gradient(135deg, #8b7bf0 0%, #c77be8 50%, #f0568a 100%);
+    --shadow-sm: 0 1px 2px rgba(14, 17, 22, .05);
+    --shadow: 0 4px 16px rgba(14, 17, 22, .07);
+    --shadow-lg: 0 10px 34px rgba(14, 17, 22, .12);
+    --r-lg: 22px;
+    --r-md: 16px;
+    --r-sm: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 20px; padding-block: 0 112px; }
+
+  /* ---------- header ---------- */
+  .top {
+    display: flex; align-items: center; gap: 12px;
+    padding-block: 18px 14px;
+  }
+  .top h1 {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 27px; font-weight: 800; letter-spacing: -0.025em;
+    margin: 0; flex: 1; line-height: 1.05;
+  }
+  .icon-btn {
+    width: 42px; height: 42px; flex: none;
+    border-radius: 50%; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+    display: grid; place-items: center; cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    font-size: 17px; padding: 0;
+    transition: transform .1s, background-color .15s;
+  }
+  .icon-btn:active { transform: scale(.94); }
+  .icon-btn.solid { background: var(--crimson); border-color: var(--crimson); color: var(--on-accent); font-size: 22px; }
+  .icon-btn .dot-badge {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--violet); border: 2px solid var(--surface);
+    transform: translate(12px, -11px);
+  }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--violet); outline-offset: 2px;
+  }
+
+  /* ---------- logo mark ---------- */
+  .mark {
+    width: 44px; height: 44px; flex: none; border-radius: 50%;
+    background: var(--crimson); color: #fff;
+    display: grid; place-items: center;
+    box-shadow: 0 6px 16px rgba(229, 23, 63, .32);
+  }
+  .mark svg { width: 22px; height: 22px; display: block; }
+
+  /* ---------- gradient hero ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    border-radius: 24px; padding: 20px;
+    background: var(--grad);
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(140, 90, 220, .28);
+    margin-bottom: 6px;
+    isolation: isolate;
+  }
+  .hero::before, .hero::after {
+    content: ""; position: absolute; border-radius: 50%; z-index: -1;
+    background: rgba(255, 255, 255, .16);
+  }
+  .hero::before { width: 150px; height: 150px; right: -44px; top: -56px; }
+  .hero::after { width: 96px; height: 96px; right: 46px; bottom: -52px; background: rgba(255, 255, 255, .11); }
+
+  .hero-eyebrow {
+    font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+    font-weight: 700; opacity: .85;
+  }
+  .hero-route {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 25px; font-weight: 800; letter-spacing: -0.02em;
+    margin-top: 5px; line-height: 1.05;
+  }
+  .hero-price {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 44px; font-weight: 800; letter-spacing: -0.035em;
+    line-height: 1; margin-top: 12px;
+  }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+  .hero-pill {
+    background: rgba(255, 255, 255, .22);
+    border-radius: 999px; padding: 6px 13px;
+    font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  }
+  .hero-pill.solid { background: #fff; color: #7c3aa8; }
+
+  /* ---------- chips ---------- */
+  .chips {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding-block: 2px 16px;
+  }
+  .chip {
+    flex: 0 1 auto; cursor: pointer;
+    padding: 10px 15px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink); font-size: 13.5px; font-weight: 600;
+    font-family: Inter, sans-serif; white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(229, 23, 63, .16);
+    transition: background-color .15s, color .15s, border-color .15s, transform .1s;
+  }
+  .chip:active { transform: scale(.96); }
+  .chip[aria-selected="true"] {
+    background: var(--crimson); border-color: var(--crimson); color: var(--on-accent);
+  }
+
+  /* ---------- section headings ---------- */
+  .sec-head {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 22px 0 12px;
+  }
+  .sec-head h2 {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 19px; font-weight: 700; letter-spacing: -0.015em;
+    margin: 0; flex: 1;
+  }
+  .sec-note { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
+
+  /* ---------- stat tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile {
+    background: var(--tile); border-radius: var(--r-md);
+    padding: 14px 13px 15px;
+    display: flex; flex-direction: column; gap: 5px;
+    min-width: 0;
+  }
+  .tile-k { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+  .tile-v {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 21px; font-weight: 700; letter-spacing: -0.02em;
+    line-height: 1.1; white-space: nowrap;
+  }
+  .tile-v.good { color: var(--good); }
+  .tile-v.bad { color: var(--bad); }
+  .tile-sub { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+
+  /* ---------- chart card ---------- */
+  .chart-card {
+    background: var(--tile); border-radius: var(--r-lg);
+    padding: 16px 12px 8px; margin-top: 12px;
+  }
+  .chart { display: block; width: 100%; height: 190px; overflow: visible; }
+  .chart-empty {
+    height: 190px; display: grid; place-items: center; text-align: center;
+    color: var(--ink-3); font-size: 13.5px; padding: 0 24px;
+  }
+
+  /* ---------- window / target rows ---------- */
+  .row-card {
+    display: flex; align-items: center; gap: 13px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 13px 14px;
+    margin-top: 10px; box-shadow: var(--shadow-sm);
+  }
+  .row-ico {
+    width: 42px; height: 42px; flex: none; border-radius: 50%;
+    background: var(--tile); display: grid; place-items: center; font-size: 18px;
+  }
+  .row-ico.violet { background: var(--violet-soft); }
+  .row-body { flex: 1; min-width: 0; }
+  .row-title { font-size: 14.5px; font-weight: 600; }
+  .row-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+  .row-val {
+    font-family: Archivo, Inter, sans-serif;
+    font-size: 17px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap;
+  }
+
+  .bar { height: 7px; border-radius: 999px; background: var(--tile-2); overflow: hidden; margin-top: 7px; }
+  .bar span { display: block; height: 100%; border-radius: 999px; background: var(--crimson); }
+  .bar span.good { background: var(--good); }
+
+  /* ---------- leaderboard ---------- */
+  .board { background: var(--surface); border-radius: var(--r-lg); overflow: hidden; }
+  .board-head {
+    display: grid; grid-template-columns: 34px 1fr auto; gap: 12px;
+    padding: 0 4px 9px;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700;
+  }
+  .board-row {
+    display: grid; grid-template-columns: 34px 1fr auto; gap: 12px;
+    touch-action: manipulation;
+    align-items: center; width: 100%;
+    padding: 12px 4px; border-top: 1px solid var(--line);
+    background: none; border-left: 0; border-right: 0; border-bottom: 0;
+    text-align: left; color: inherit; cursor: pointer; font: inherit;
+  }
+  .board-row:first-of-type { border-top: 0; }
+  .board-row[aria-current="true"] .b-name { color: var(--crimson); }
+  .rank {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12.5px; font-weight: 700;
+    background: var(--tile); color: var(--ink-2);
+  }
+  .rank.top { background: var(--crimson); color: var(--on-accent); }
+  .b-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .b-sub { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .b-right { text-align: right; }
+  .b-price { font-family: Archivo, Inter, sans-serif; font-size: 16.5px; font-weight: 700; letter-spacing: -0.02em; }
+  .b-delta { font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+  .b-delta.down { color: var(--good); }
+  .b-delta.up { color: var(--bad); }
+  .b-delta.flat { color: var(--ink-3); }
+
+  /* ---------- rankings ---------- */
+  .rank-row {
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 12px;
+    align-items: center; width: 100%;
+    padding: 13px 4px; border-top: 1px solid var(--line);
+    background: none; border-left: 0; border-right: 0; border-bottom: 0;
+    text-align: left; color: inherit; cursor: pointer; font: inherit;
+    touch-action: manipulation;
+  }
+  .rank-row:first-of-type { border-top: 0; }
+  .medal {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 800;
+    font-family: Archivo, Inter, sans-serif;
+    background: var(--tile); color: var(--ink-2);
+  }
+  .medal.g1 { background: var(--crimson); color: #fff; box-shadow: 0 4px 12px rgba(229,23,63,.3); }
+  .medal.g2 { background: var(--violet); color: #fff; }
+  .medal.g3 { background: var(--violet-soft); color: var(--violet); }
+  .rank-row > span { min-width: 0; }
+  .r-route { display: inline; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .r-when { display: block; font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+  .r-price { display: block; font-family: Archivo, Inter, sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; text-align: right; white-space: nowrap; }
+  .r-air { display: block; font-size: 11.5px; color: var(--ink-3); text-align: right; margin-top: 2px; white-space: nowrap; }
+  .r-badge {
+    display: inline-block; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+    font-weight: 700; padding: 2px 6px; border-radius: 5px; margin-left: 6px;
+    background: var(--good-soft); color: var(--good); vertical-align: 1px;
+  }
+
+  /* ---------- lowest-price table ---------- */
+  .picker { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+  .picker label {
+    font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700;
+  }
+  .picker select {
+    font: inherit; font-weight: 600; width: 100%;
+    background: var(--tile); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 44px 14px 16px;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 17px center;
+  }
+
+  .summary-line {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 10px; font-size: 13px; color: var(--ink-2);
+  }
+  .summary-line b { color: var(--ink); font-weight: 600; }
+
+  .lows-wrap { overflow-x: auto; }
+  table.lows {
+    width: 100%; border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  table.lows th {
+    text-align: left; padding: 0 10px 9px 0;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700; white-space: nowrap;
+  }
+  table.lows th:last-child, table.lows td:last-child { text-align: right; padding-right: 0; }
+  table.lows th:first-child, table.lows td:first-child { width: 34px; padding-right: 8px; }
+  table.lows td {
+    padding: 12px 10px 12px 0; border-top: 1px solid var(--line);
+    vertical-align: middle; font-size: 14px;
+  }
+  .t-win { font-weight: 600; white-space: nowrap; }
+  .t-air { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .t-seen { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .t-held { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .t-price {
+    font-family: Archivo, Inter, sans-serif; font-size: 17px; font-weight: 700;
+    letter-spacing: -0.02em; white-space: nowrap;
+  }
+  tr.best .t-price { color: var(--good); }
+  table.lows.hist th:first-child, table.lows.hist td:first-child { width: auto; padding-right: 12px; }
+  .h-down { color: var(--good); font-weight: 600; }
+  .h-up { color: var(--bad); font-weight: 600; }
+  .h-flat { color: var(--ink-3); }
+
+  /* ---------- verdict ---------- */
+  .verdict {
+    display: flex; align-items: flex-start; gap: 10px;
+    border-radius: var(--r-md); padding: 14px 16px;
+    margin-bottom: 14px; font-size: 14.5px; font-weight: 600;
+    line-height: 1.35;
+  }
+  .verdict.quiet { background: var(--tile); color: var(--ink-2); }
+  .verdict.act { background: var(--good-soft); color: var(--good); }
+  .verdict .v-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: none; margin-top: 6px;
+    background: currentColor;
+  }
+  .deal-tag {
+    display: inline-block; font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+    font-weight: 800; padding: 3px 7px; border-radius: 6px; margin-left: 7px;
+    background: var(--good); color: #fff; vertical-align: 2px;
+  }
+
+  /* ---------- book links ---------- */
+  .book-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; color: #7c3aa8;
+    border-radius: 999px; padding: 9px 16px;
+    font-size: 13.5px; font-weight: 700; text-decoration: none;
+    touch-action: manipulation;
+  }
+  .book-pill:active { transform: scale(.97); }
+  .book-row {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; margin-top: 10px; padding: 14px;
+    border-radius: var(--r-md); border: 1px solid var(--line);
+    background: var(--surface); color: var(--crimson);
+    font-size: 14.5px; font-weight: 700; text-decoration: none;
+    box-shadow: var(--shadow-sm); touch-action: manipulation;
+  }
+  .book-row:active { background: var(--tile); }
+  td a.t-book { color: inherit; text-decoration: none; display: block; }
+  td a.t-book .t-price { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  .ext { font-size: 11px; opacity: .75; }
+
+  /* ---------- log ---------- */
+  .log { margin-top: 4px; }
+  .log-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 12px;
+    align-items: center; padding: 11px 4px; border-top: 1px solid var(--line);
+  }
+  .log-row:first-child { border-top: 0; }
+  .log-a { font-size: 14px; font-weight: 500; }
+  .log-b { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+  .log-p { font-family: Archivo, Inter, sans-serif; font-size: 15px; font-weight: 700; }
+  .pill-tag {
+    display: inline-block; font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase;
+    font-weight: 700; padding: 2px 6px; border-radius: 5px; margin-left: 6px;
+    background: var(--violet-soft); color: var(--violet); vertical-align: 1px;
+  }
+  .pill-tag.grey { background: var(--tile-2); color: var(--ink-3); }
+
+  .more-btn {
+    width: 100%; margin-top: 10px; padding: 11px;
+    border-radius: var(--r-sm); border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-2);
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ---------- sync ---------- */
+  .sync {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; color: var(--ink-2);
+    background: var(--tile); border-radius: 999px;
+    padding: 9px 15px; margin-bottom: 4px;
+  }
+  .sync .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ink-3); }
+  .sync.on .dot { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+  .sync b { color: var(--ink); font-weight: 600; }
+  .sync .ago { margin-left: auto; color: var(--ink-3); white-space: nowrap; }
+
+  /* ---------- dock ---------- */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding: 9px 20px; padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+  }
+  .dock-in { max-width: 560px; margin: 0 auto; display: flex; gap: 8px; }
+  .tab {
+    flex: 1; background: none; border: 0; cursor: pointer;
+    padding: 7px 4px 5px; border-radius: var(--r-sm);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--ink-3); font-size: 10.5px; font-weight: 600;
+    font-family: Inter, sans-serif;
+  }
+  .tab svg { width: 23px; height: 23px; display: block; }
+  .tab.on { color: var(--crimson); }
+
+  /* ---------- empty ---------- */
+  .empty {
+    background: var(--tile); border-radius: var(--r-lg);
+    padding: 42px 26px; text-align: center; color: var(--ink-2);
+  }
+  .empty h3 { font-family: Archivo, sans-serif; font-size: 18px; margin: 0 0 7px; color: var(--ink); }
+  .empty p { margin: 0 0 18px; font-size: 14px; }
+
+  .btn {
+    border: 0; border-radius: 999px; cursor: pointer;
+    padding: 14px 24px; font-size: 15px; font-weight: 700;
+    font-family: Inter, sans-serif;
+    background: var(--crimson); color: var(--on-accent);
+    transition: transform .1s, opacity .15s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: var(--tile); color: var(--ink); }
+
+  /* ---------- sheets ---------- */
+  dialog { border: 0; padding: 0; background: transparent; max-width: 100%; width: 100%; max-height: 100%; margin: auto auto 0; }
+  dialog::backdrop { background: rgba(8, 10, 14, .55); backdrop-filter: blur(2px); }
+  .sheet {
+    background: var(--surface); color: var(--ink);
+    border-radius: 26px 26px 0 0;
+    padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+    max-width: 560px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 15px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .grab { width: 38px; height: 4px; border-radius: 999px; background: var(--line); margin: 4px auto 2px; }
+  .sheet h2 { font-family: Archivo, sans-serif; font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+  .sheet .lede { margin: -9px 0 0; font-size: 13.5px; color: var(--ink-2); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+  input[type="text"], input[type="date"], input[type="number"], select, textarea {
+    font: inherit; width: 100%;
+    background: var(--tile); color: var(--ink);
+    border: 1px solid transparent; border-radius: 14px; padding: 13px 15px;
+    font-variant-numeric: tabular-nums;
+  }
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.5; resize: vertical; min-height: 150px; }
+  .code-in { font-family: Archivo, sans-serif; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; font-size: 18px; }
+  .price-in { font-family: Archivo, sans-serif; font-size: 22px; font-weight: 700; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  @media (max-width: 360px) { .row2 { grid-template-columns: 1fr; } }
+  .switch { display: flex; align-items: center; gap: 11px; font-size: 14.5px; font-weight: 500; }
+  .switch input { width: 20px; height: 20px; accent-color: var(--crimson); }
+  .hint { font-size: 12.5px; color: var(--ink-3); margin: -4px 0 0; }
+  .acts { display: flex; gap: 10px; }
+  .acts .btn { flex: 1; }
+
+  #toast {
+    position: fixed; left: 20px; right: 20px;
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+    z-index: 40; max-width: 520px; margin: 0 auto;
+    background: var(--ink); color: var(--bg);
+    border-radius: 16px; padding: 13px 16px; font-size: 13.5px; font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    opacity: 0; transform: translateY(10px);
+    transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: none; }
+  #toast b { color: var(--crimson); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 00-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16z"/></svg>
+    </div>
+    <h1>Fare Watch</h1>
+    <button class="icon-btn" id="openData" aria-label="Your data" title="Your data">
+      <span aria-hidden="true">↓</span>
+    </button>
+    <button class="icon-btn solid" id="openAdd" aria-label="Track a route" title="Track a route">
+      <span aria-hidden="true">+</span>
+    </button>
+  </header>
+
+  <div class="sync" id="sync" hidden>
+    <span class="dot" aria-hidden="true"></span>
+    <span id="syncText"></span>
+    <span class="ago" id="syncAgo"></span>
+  </div>
+
+  <div class="chips" id="chips" role="tablist" aria-label="Tracked routes"></div>
+
+  <main id="view"></main>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <button class="tab on" id="tabRoutes" aria-label="Routes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-7-7 18-2.5-8.5L3 11z"/></svg>
+      Routes
+    </button>
+    <button class="tab" id="tabBest" aria-label="Lowest prices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M17 5h3v2a3 3 0 01-3 3"/><path d="M7 5H4v2a3 3 0 003 3"/></svg>
+      Lowest
+    </button>
+    <button class="tab" id="tabHistory" aria-label="History">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      History
+    </button>
+    <button class="tab" id="tabLog" aria-label="Log a price">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+      Log price
+    </button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="addSheet">
+  <form class="sheet" method="dialog" id="addForm">
+    <div class="grab" aria-hidden="true"></div>
+    <h2>Track a route</h2>
+
+    <div class="row2">
+      <div class="field">
+        <label for="f-origin">From</label>
+        <input class="code-in" type="text" id="f-origin" placeholder="SFO" maxlength="3" autocomplete="off" spellcheck="false" required>
+      </div>
+      <div class="field">
+        <label for="f-dest">To</label>
+        <input class="code-in" type="text" id="f-dest" placeholder="ORD" maxlength="3" autocomplete="off" spellcheck="false" required>
+      </div>
+    </div>
+
+    <div class="switch">
+      <input type="checkbox" id="f-flex" checked>
+      <label for="f-flex" style="text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink);font-weight:600">Flexible — find the cheapest dates</label>
+    </div>
+
+    <div class="field" id="flexField">
+      <label for="f-duration">Trip length</label>
+      <select id="f-duration">
+        <option value="1">Weekend</option>
+        <option value="2" selected>1 week</option>
+        <option value="3">2 weeks</option>
+      </select>
+      <p class="hint">Searches every date in the next six months and tracks the cheapest window it finds.</p>
+    </div>
+
+    <div class="switch" id="nonstopRow">
+      <input type="checkbox" id="f-nonstop" checked>
+      <label for="f-nonstop" style="text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink);font-weight:600">Nonstop only</label>
+    </div>
+
+    <div id="fixedDates" hidden>
+      <div class="field">
+        <label for="f-depart">Depart</label>
+        <input type="date" id="f-depart">
+      </div>
+      <div class="switch" style="margin-top:12px">
+        <input type="checkbox" id="f-round" checked>
+        <label for="f-round" style="text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink);font-weight:600">Round trip</label>
+      </div>
+      <div class="field" id="returnField" style="margin-top:12px">
+        <label for="f-return">Return</label>
+        <input type="date" id="f-return">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-target">Alert me under</label>
+      <input type="number" id="f-target" placeholder="450" min="0" step="1" inputmode="numeric">
+    </div>
+
+    <div class="acts">
+      <button type="button" class="btn ghost" id="cancelAdd">Cancel</button>
+      <button type="submit" class="btn" id="submitAdd">Track it</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logSheet">
+  <form class="sheet" method="dialog" id="logForm">
+    <div class="grab" aria-hidden="true"></div>
+    <h2>Log a price</h2>
+    <p class="lede" id="logLede"></p>
+
+    <div class="field" id="routePick" hidden>
+      <label for="l-route">Route</label>
+      <select id="l-route"></select>
+    </div>
+
+    <div class="field">
+      <label for="l-price">Price you saw</label>
+      <input class="price-in" type="number" id="l-price" min="1" step="1" inputmode="decimal" placeholder="612" required>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="l-airline">Airline</label>
+        <input type="text" id="l-airline" placeholder="United" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="l-date">Seen on</label>
+        <input type="date" id="l-date">
+      </div>
+    </div>
+    <p class="hint">Back-date it to fill in prices you already know.</p>
+
+    <div class="acts">
+      <button type="button" class="btn ghost" id="cancelLog">Cancel</button>
+      <button type="submit" class="btn">Save price</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dataSheet">
+  <div class="sheet">
+    <div class="grab" aria-hidden="true"></div>
+    <h2>Your data</h2>
+    <p class="lede">Copy it out to keep it, or paste a backup back in.</p>
+    <div class="field">
+      <label for="d-csv">Fare history (CSV)</label>
+      <textarea id="d-csv" spellcheck="false" aria-label="Fare history as CSV"></textarea>
+    </div>
+    <p class="hint">Downloads are blocked in this viewer, so copy the text — it pastes straight into Numbers, Excel or Sheets.</p>
+    <div class="acts">
+      <button type="button" class="btn ghost" id="copyCSV">Copy CSV</button>
+      <button type="button" class="btn ghost" id="openImport">Backup</button>
+    </div>
+    <div class="acts">
+      <button type="button" class="btn" id="closeData">Done</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="importSheet">
+  <form class="sheet" method="dialog" id="importForm">
+    <div class="grab" aria-hidden="true"></div>
+    <h2>Backup &amp; restore</h2>
+    <p class="lede">Copy this to save your routes. Pasting a backup replaces everything currently tracked.</p>
+    <div class="field">
+      <label for="i-json">Backup JSON</label>
+      <textarea id="i-json" spellcheck="false" aria-label="Backup JSON"></textarea>
+    </div>
+    <div class="acts">
+      <button type="button" class="btn ghost" id="copyJSON">Copy</button>
+      <button type="button" class="btn ghost" id="cancelImport">Cancel</button>
+    </div>
+    <div class="acts">
+      <button type="submit" class="btn">Replace all</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "fare-watch.routes.v1";
+  var SEL_KEY = "fare-watch.selected";
+  var DAY = 86400000;
+  var DUR = { 1: "weekend", 2: "1 week", 3: "2 weeks" };
+
+  // ---------- state ----------
+  function load() {
+    try { var raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+    return null;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(routes)); } catch (e) {}
+  }
+
+  var routes = load() || [];
+  var selectedID = null;
+  var showAllLog = false;
+  var page = "routes";        // "routes" | "best"
+  var bestFilter = "all";     // "all" or a route id
+  try { selectedID = localStorage.getItem(SEL_KEY); } catch (e) {}
+
+  var db = null, remoteRoutes = null, remoteHistory = null;
+  var alerts = { digest: false };      // mirrored from config/alerts
+  function noop() {}
+
+  // ---------- helpers ----------
+  var money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  var mDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+  var stamp = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  function parseDay(s) { var p = String(s).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function ordered(r) { return (r.quotes || []).slice().sort(function (a, b) { return a.at - b.at; }); }
+  function latest(r) { var q = ordered(r); return q.length ? q[q.length - 1] : null; }
+  function previous(r) { var q = ordered(r); return q.length > 1 ? q[q.length - 2] : null; }
+  function lowest(r) { return (r.quotes || []).reduce(function (b, q) { return !b || q.price < b.price ? q : b; }, null); }
+  function highest(r) { return (r.quotes || []).reduce(function (b, q) { return !b || q.price > b.price ? q : b; }, null); }
+
+  function change(r) { var a = latest(r), b = previous(r); return a && b ? a.price - b.price : null; }
+  function atTarget(r) { var l = latest(r); return !!(r.target && l && l.price <= r.target); }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function routeName(r) { return r.origin + " → " + r.dest; }
+
+  /// Where to actually book this fare. Sweeps store the exact Google Flights
+  /// link the API returned; anything older falls back to a query built from
+  /// the route and its dates, which lands on the same search.
+  function bookingLink(r, q) {
+    if (q && q.link) return q.link;
+    var dest = r.dest;
+    var parts = ["Flights to " + dest + " from " + r.origin];
+    var out = (q && q.winStart) || r.depart;
+    var back = (q && q.winEnd) || r.ret;
+    if (out) parts.push("on " + out);
+    if (back) parts.push("through " + back);
+    if (r.nonstop) parts.push("nonstop");
+    return "https://www.google.com/travel/flights?q=" + encodeURIComponent(parts.join(" "));
+  }
+
+  function windowText(q) {
+    if (!q || !q.winStart) return "";
+    var a = mDay.format(parseDay(q.winStart));
+    return q.winEnd ? a + " – " + mDay.format(parseDay(q.winEnd)) : a;
+  }
+
+  function subtitle(r) {
+    if (r.mode === "hunt") {
+      var bits = ["Cheapest " + (DUR[r.duration] || "1 week")];
+      if (r.nonstop) bits.push("nonstop");
+      return bits.join(" · ");
+    }
+    if (!r.depart) return "No dates set";
+    var out = mDay.format(parseDay(r.depart));
+    return r.ret ? out + " – " + mDay.format(parseDay(r.ret)) : out + " · one way";
+  }
+
+  function relative(ms) {
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    var h = Math.round(m / 60);
+    if (h < 24) return h + "h ago";
+    return Math.round(h / 24) + "d ago";
+  }
+
+  // ---------- insights ----------
+  function insights(r) {
+    var qs = ordered(r);
+    if (qs.length < 3) return null;
+    var p = qs.map(function (q) { return q.price; });
+    var lo = Math.min.apply(null, p), hi = Math.max.apply(null, p);
+    var avg = p.reduce(function (a, b) { return a + b; }, 0) / p.length;
+    var cur = p[p.length - 1];
+    var span = hi - lo;
+    var pos = span > 0 ? (cur - lo) / span : 0;
+
+    var w = Math.max(1, Math.floor(qs.length / 3));
+    var mean = function (a) { return a.reduce(function (s, q) { return s + q.price; }, 0) / a.length; };
+    var early = mean(qs.slice(0, w)), recent = mean(qs.slice(-w));
+    var shift = early > 0 ? (recent - early) / early : 0;
+    var trend = shift < -0.03 ? "falling" : (shift > 0.03 ? "rising" : "steady");
+
+    var verdict;
+    if (pos < 0.15) verdict = "About as low as you have seen it.";
+    else if (pos < 0.4) verdict = "On the cheap side of its range.";
+    else if (pos < 0.6) verdict = "Middle of its usual range.";
+    else if (pos < 0.85) verdict = "On the expensive side of its range.";
+    else verdict = "Near the top of its range — worth waiting.";
+
+    return {
+      count: qs.length, low: lo, high: hi, avg: Math.round(avg), cur: cur,
+      pos: pos, trend: trend, verdict: verdict,
+      days: Math.max(0, Math.round((qs[qs.length - 1].at - qs[0].at) / DAY))
+    };
+  }
+
+  // ---------- rankings ----------
+  /// A reading counts as "tracked" only if this app recorded it. Google's own
+  /// backfilled price history (source "history") describes the route before
+  /// tracking began, and demo rows are not real fares — neither belongs in a
+  /// ranking of what watching this route has actually turned up.
+  function isTracked(q) {
+    return !q.sim && q.source !== "history";
+  }
+
+  /// One route's cheapest tracked fares, best first. A fare that holds steady
+  /// for days would otherwise fill every row, so identical price/window
+  /// readings collapse into one entry dated when it first appeared.
+  function routeLows(r, limit) {
+    var seen = {}, out = [];
+    (r.quotes || []).forEach(function (q) {
+      if (!isTracked(q)) return;
+      var key = q.price + "|" + (q.winStart || "fixed");
+      if (seen[key]) {
+        if (q.at < seen[key].q.at) seen[key].q = q;
+        seen[key].count++;
+        return;
+      }
+      seen[key] = { r: r, q: q, count: 1 };
+      out.push(seen[key]);
+    });
+    out.sort(function (a, b) { return a.q.price - b.q.price || a.q.at - b.q.at; });
+    return limit ? out.slice(0, limit) : out;
+  }
+
+  function trackedCount(r) {
+    return (r.quotes || []).filter(isTracked).length;
+  }
+
+  /// When tracking of this route actually started.
+  function trackedSince(r) {
+    var first = null;
+    (r.quotes || []).forEach(function (q) {
+      if (isTracked(q) && (!first || q.at < first)) first = q.at;
+    });
+    return first;
+  }
+
+  // ---------- deal detection ----------
+  /// A deal is defined against the route's OWN record, not an absolute price:
+  /// well under its recent average, or down among the cheapest readings ever
+  /// taken. Needs enough history to mean anything — below that it stays quiet
+  /// rather than calling noise a bargain.
+  var DEAL_DROP = 0.20;        // 20% under the 30-day mean
+  var DEAL_MIN_READINGS = 8;
+
+  function deal(r) {
+    var qs = ordered(r).filter(isTracked);
+    if (qs.length < DEAL_MIN_READINGS) return null;
+
+    var l = qs[qs.length - 1];
+    var cutoff = Date.now() - 30 * DAY;
+    var recent = qs.filter(function (q) { return q.at >= cutoff; });
+    if (recent.length < 4) recent = qs.slice(-Math.min(qs.length, 14));
+
+    var mean = recent.reduce(function (a, q) { return a + q.price; }, 0) / recent.length;
+    var below = mean > 0 ? (mean - l.price) / mean : 0;
+
+    var sorted = qs.map(function (q) { return q.price; }).sort(function (a, b) { return a - b; });
+    var decile = sorted[Math.max(0, Math.floor(sorted.length * 0.1) - 1)];
+
+    var byDrop = below >= DEAL_DROP;
+    var byDecile = l.price <= decile;
+    if (!byDrop && !byDecile) return null;
+
+    return {
+      price: l.price, quote: l,
+      pctBelow: Math.round(below * 100),
+      mean: Math.round(mean),
+      reason: byDrop ? "drop" : "decile",
+      isLow: l.price === sorted[0]
+    };
+  }
+
+  /// One sentence at the top of the app answering "do I need to act today?"
+  function verdict() {
+    if (!routes.length) return "";
+
+    var deals = routes.map(function (r) { return { r: r, d: deal(r) }; })
+                      .filter(function (x) { return x.d; })
+                      .sort(function (a, b) { return b.d.pctBelow - a.d.pctBelow; });
+
+    var hits = routes.filter(atTarget);
+
+    var text, tone = "quiet";
+    if (hits.length) {
+      tone = "act";
+      text = hits.length === 1
+        ? routeName(hits[0]) + " is under your target at " + money.format(latest(hits[0]).price) + "."
+        : hits.length + " routes are under target right now.";
+    } else if (deals.length) {
+      tone = "act";
+      var d = deals[0];
+      text = d.d.isLow
+        ? routeName(d.r) + " is the cheapest you have ever recorded, at " + money.format(d.d.price) + "."
+        : routeName(d.r) + " is " + d.d.pctBelow + "% below its recent average, at " + money.format(d.d.price) + ".";
+    } else {
+      var tracked = routes.filter(function (r) { return trackedCount(r) >= DEAL_MIN_READINGS; }).length;
+      text = tracked
+        ? "Nothing worth acting on today."
+        : "Still building history — deal detection needs about " + DEAL_MIN_READINGS + " readings per route.";
+    }
+
+    return '<div class="verdict ' + tone + '">' +
+      '<span class="v-dot" aria-hidden="true"></span>' +
+      '<span>' + esc(text) + '</span></div>';
+  }
+
+  /// Opt in to a one-line summary after every sweep. Off by default, because
+  /// a daily notification that usually says "nothing happened" trains you to
+  /// ignore the ones that matter.
+  function digestRow() {
+    return '<label class="row-card" style="cursor:pointer" for="digestToggle">' +
+      '<span class="row-ico violet" aria-hidden="true">✉</span>' +
+      '<span class="row-body"><span class="row-title">Daily summary</span>' +
+      '<span class="row-sub">A one-line push after every sweep, even when nothing moved.</span></span>' +
+      '<input type="checkbox" id="digestToggle" style="width:22px;height:22px;accent-color:var(--crimson)"' +
+      (alerts.digest ? " checked" : "") + '></label>';
+  }
+
+  // ---------- chart ----------
+  // Red line over a fading area, circular nodes, and a floating badge on the
+  // most recent point with a dashed drop line — the reference's signature.
+  function chart(r) {
+    var qs = ordered(r);
+    if (!qs.length) {
+      return '<div class="chart-empty">No prices recorded yet.<br>The daily sweep fills this in.</div>';
+    }
+
+    // With one reading there is no trend yet, so draw a level line at that
+    // price — a real chart waiting for its second point, not an empty box.
+    var single = qs.length === 1;
+    if (single) qs = [qs[0], qs[0]];
+
+    var W = 340, H = 190;
+    var padL = 6, padR = 6, padT = 40, padB = 26;
+    var p = qs.map(function (q) { return q.price; });
+    var min = Math.min.apply(null, p), max = Math.max.apply(null, p);
+    if (r.target) { min = Math.min(min, r.target); max = Math.max(max, r.target); }
+    var span = (max - min) || Math.max(20, max * 0.08);
+    min -= span * 0.22; max += span * 0.18;
+    span = max - min;
+
+    var n = qs.length;
+    function X(i) { return padL + (i / (n - 1)) * (W - padL - padR); }
+    function Y(v) { return padT + (1 - (v - min) / span) * (H - padT - padB); }
+
+    var pts = qs.map(function (q, i) { return [X(i), Y(q.price)]; });
+    var line = pts.map(function (a, i) { return (i ? "L" : "M") + a[0].toFixed(1) + " " + a[1].toFixed(1); }).join(" ");
+    var base = H - padB;
+    var area = line + " L" + pts[n - 1][0].toFixed(1) + " " + base + " L" + pts[0][0].toFixed(1) + " " + base + " Z";
+
+    var last = pts[n - 1], lastQ = qs[n - 1];
+    var svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Recorded fares for ' +
+      esc(routeName(r)) + '">' +
+      '<defs><linearGradient id="fw-fill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var(--crimson)" stop-opacity="0.26"/>' +
+      '<stop offset="100%" stop-color="var(--crimson)" stop-opacity="0"/>' +
+      '</linearGradient></defs>';
+
+    svg += '<path d="' + area + '" fill="url(#fw-fill)"/>';
+
+    if (r.target) {
+      var ty = Y(r.target);
+      if (ty > padT && ty < base) {
+        svg += '<line x1="' + padL + '" y1="' + ty.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + ty.toFixed(1) +
+          '" stroke="var(--good)" stroke-width="1.2" stroke-dasharray="3 4"/>';
+      }
+    }
+
+    svg += '<path d="' + line + '" fill="none" stroke="var(--crimson)" stroke-width="2.4" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/>';
+
+    // Intermediate nodes: hollow rings, thinned out when the series is dense.
+    var step = Math.max(1, Math.ceil(n / 9));
+    qs.forEach(function (q, i) {
+      if (single) return;
+      if (i === n - 1) return;
+      if (i % step !== 0) return;
+      svg += '<circle cx="' + pts[i][0].toFixed(1) + '" cy="' + pts[i][1].toFixed(1) +
+        '" r="4" fill="var(--tile)" stroke="var(--crimson)" stroke-width="2"/>';
+    });
+
+    // Dashed drop line and emphasised endpoint.
+    svg += '<line x1="' + last[0].toFixed(1) + '" y1="' + last[1].toFixed(1) + '" x2="' + last[0].toFixed(1) +
+      '" y2="' + base + '" stroke="var(--crimson)" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.5"/>';
+    svg += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) +
+      '" r="9" fill="var(--crimson)" opacity="0.16"/>';
+    svg += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) +
+      '" r="4.6" fill="var(--crimson)" stroke="var(--tile)" stroke-width="2.4"/>';
+
+    // Floating price badge, kept inside the drawing at both edges.
+    var label = money.format(lastQ.price);
+    var bw = Math.max(52, label.length * 8.6 + 18), bh = 26;
+    var bx = Math.min(Math.max(last[0] - bw / 2, padL), W - padR - bw);
+    var by = Math.max(last[1] - bh - 13, 2);
+    svg += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) +
+      '" height="' + bh + '" rx="13" fill="var(--violet)"/>';
+    svg += '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (by + 17.5).toFixed(1) +
+      '" text-anchor="middle" font-family="Archivo, Inter, sans-serif" font-size="13" font-weight="700" fill="#fff">' +
+      esc(label) + '</text>';
+
+    // Endpoint dates only — the reference keeps axes almost bare.
+    svg += '<text x="' + padL + '" y="' + (H - 7) + '" font-size="11" font-family="Inter, sans-serif" ' +
+      'font-weight="500" fill="var(--ink-3)">' +
+      esc(single ? "first reading" : mDay.format(new Date(qs[0].at))) + '</text>';
+    svg += '<text x="' + (W - padR) + '" y="' + (H - 7) + '" text-anchor="end" font-size="11" ' +
+      'font-family="Inter, sans-serif" font-weight="500" fill="var(--ink-3)">' +
+      esc(mDay.format(new Date(lastQ.at))) + '</text>';
+
+    return svg + '</svg>';
+  }
+
+  // ---------- render ----------
+  var chipsEl = document.getElementById("chips");
+  var viewEl = document.getElementById("view");
+  var syncEl = document.getElementById("sync");
+  var syncText = document.getElementById("syncText");
+  var syncAgo = document.getElementById("syncAgo");
+
+  function current() {
+    return routes.filter(function (r) { return r.id === selectedID; })[0] || routes[0] || null;
+  }
+
+  function renderChips() {
+    chipsEl.innerHTML = routes.map(function (r) {
+      var on = current() && r.id === current().id;
+      return '<button class="chip" role="tab" data-id="' + esc(r.id) + '" aria-selected="' + on + '">' +
+        esc(routeName(r)) + '</button>';
+    }).join("");
+    chipsEl.hidden = routes.length < 2;
+  }
+
+  /// The gradient headline card. It always shows the route you have selected —
+  /// so tapping a chip visibly changes the biggest thing on screen — and only
+  /// claims "best value" when the ranking is based on real history.
+  function hero(r) {
+    if (!r) return "";
+    var l = latest(r);
+    if (!l) return "";
+    var ins = insights(r);
+    var ranked = rankRoutes();
+    var isBest = ranked.length > 1 && ranked[0].r.id === r.id &&
+                 routes.some(function (x) { return insights(x); });
+    var eyebrow = isBest ? "Best value right now"
+                : (r.mode === "hunt" ? "Cheapest window found" : "Cheapest right now");
+
+    var pills = [];
+    if (l.winStart) pills.push('<span class="hero-pill solid">' + esc(windowText(l)) + '</span>');
+    pills.push('<span class="hero-pill">' + esc(l.airline) + '</span>');
+    if (l.stops === 0 || r.nonstop) pills.push('<span class="hero-pill">nonstop</span>');
+    if (ins) pills.push('<span class="hero-pill">' + esc(ins.verdict.replace(/\.$/, "")) + '</span>');
+    var dl = deal(r);
+    if (dl) pills.push('<span class="hero-pill solid">' +
+      (dl.isLow ? "All-time low" : dl.pctBelow + "% below average") + '</span>');
+
+    return '<div class="hero">' +
+      '<div class="hero-eyebrow">' + esc(eyebrow) + '</div>' +
+      '<div class="hero-route">' + esc(routeName(r)) + '</div>' +
+      '<div class="hero-price">' + money.format(l.price) + '</div>' +
+      '<div class="hero-meta">' + pills.join("") +
+        '<a class="book-pill" href="' + esc(bookingLink(r, l)) + '" target="_blank" rel="noopener">' +
+        'Book ↗</a>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /// Ranked by how good today's price is against that route's own range.
+  function rankRoutes() {
+    return routes.map(function (r) {
+      var ins = insights(r), l = latest(r);
+      return { r: r, l: l, score: ins ? ins.pos : (l ? 0.5 : 2) };
+    }).sort(function (a, b) { return a.score - b.score; });
+  }
+
+  function tiles(r) {
+    var l = latest(r), lo = lowest(r), hi = highest(r), c = change(r);
+    var ins = insights(r);
+
+    var deltaTxt = c === null ? "first price" : (c === 0 ? "no change" : (c < 0 ? "▼ " : "▲ ") + money.format(Math.abs(c)));
+    var deltaCls = c === null || c === 0 ? "" : (c < 0 ? "good" : "bad");
+
+    return '<div class="tiles">' +
+      '<div class="tile"><span class="tile-k">Right now</span>' +
+        '<span class="tile-v' + (atTarget(r) ? " good" : "") + '">' + (l ? money.format(l.price) : "—") + '</span>' +
+        '<span class="tile-sub ' + deltaCls + '">' + esc(deltaTxt) + '</span></div>' +
+      '<div class="tile"><span class="tile-k">Lowest seen</span>' +
+        '<span class="tile-v good">' + (lo ? money.format(lo.price) : "—") + '</span>' +
+        '<span class="tile-sub">' + (lo ? esc(relative(lo.at)) : "—") + '</span></div>' +
+      '<div class="tile"><span class="tile-k">' + (ins ? "Highest" : "Tracked") + '</span>' +
+        '<span class="tile-v' + (ins ? " bad" : "") + '">' + (ins ? money.format(hi.price) : (r.quotes.length || 0)) + '</span>' +
+        '<span class="tile-sub">' + (ins ? ins.days + " days" : (r.quotes.length === 1 ? "1 price" : "prices")) + '</span></div>' +
+    '</div>';
+  }
+
+  function verdictRow(r) {
+    var ins = insights(r);
+    if (!ins) {
+      var need = 3 - (r.quotes ? r.quotes.length : 0);
+      return '<div class="row-card"><div class="row-ico violet" aria-hidden="true">◷</div>' +
+        '<div class="row-body"><div class="row-title">Building the picture</div>' +
+        '<div class="row-sub">' + need + ' more price' + (need === 1 ? "" : "s") +
+        ' before the range read means anything.</div></div></div>';
+    }
+    var arrow = ins.trend === "falling" ? "↘" : (ins.trend === "rising" ? "↗" : "→");
+    var label = ins.trend === "falling" ? "Trending down" : (ins.trend === "rising" ? "Trending up" : "Holding steady");
+    return '<div class="row-card"><div class="row-ico violet" aria-hidden="true">' + arrow + '</div>' +
+      '<div class="row-body"><div class="row-title">' + esc(label) + '</div>' +
+      '<div class="row-sub">' + esc(ins.verdict) + '</div>' +
+      '<div class="bar"><span class="' + (ins.pos < 0.4 ? "good" : "") + '" style="width:' +
+        Math.round(Math.min(Math.max(ins.pos, 0.03), 1) * 100) + '%"></span></div></div></div>';
+  }
+
+  function windowRow(r) {
+    var l = latest(r);
+    if (r.mode !== "hunt" || !l || !l.winStart) return "";
+    return '<div class="row-card"><div class="row-ico" aria-hidden="true">✈</div>' +
+      '<div class="row-body"><div class="row-title">' + esc(windowText(l)) + '</div>' +
+      '<div class="row-sub">' + esc(l.airline) + (l.into ? " · into " + esc(l.into) : "") +
+      (l.stops === 0 ? " · nonstop" : "") + '</div></div>' +
+      '<div class="row-val">' + money.format(l.price) + '</div></div>';
+  }
+
+  function targetRow(r) {
+    if (!r.target) return "";
+    var l = latest(r);
+    if (!l) return "";
+    var hit = l.price <= r.target;
+    var pct = Math.min(100, Math.round((r.target / l.price) * 100));
+    return '<div class="row-card"><div class="row-ico" aria-hidden="true">' + (hit ? "✓" : "◎") + '</div>' +
+      '<div class="row-body"><div class="row-title">' +
+        (hit ? "Under your target" : money.format(l.price - r.target) + " above target") + '</div>' +
+      '<div class="row-sub">Target ' + money.format(r.target) + '</div>' +
+      '<div class="bar"><span class="' + (hit ? "good" : "") + '" style="width:' + pct + '%"></span></div></div></div>';
+  }
+
+  function board() {
+    if (routes.length < 2) return "";
+    var scored = rankRoutes();
+
+    return '<div class="sec-head"><h2>Best deals right now</h2>' +
+      '<span class="sec-note">vs each route’s own range</span></div>' +
+      '<div class="board"><div class="board-head"><span>#</span><span>Route</span><span>Price</span></div>' +
+      scored.map(function (x, i) {
+        var c = change(x.r);
+        var dCls = c === null || c === 0 ? "flat" : (c < 0 ? "down" : "up");
+        var dTxt = c === null ? "new" : (c === 0 ? "—" : (c < 0 ? "▼" : "▲") + money.format(Math.abs(c)));
+        var on = current() && x.r.id === current().id;
+        return '<button class="board-row" data-id="' + esc(x.r.id) + '" aria-current="' + on + '">' +
+          '<span class="rank' + (i === 0 ? " top" : "") + '">' + (i + 1) + '</span>' +
+          '<span><span class="b-name">' + esc(routeName(x.r)) + '</span>' +
+            '<span class="b-sub">' + esc(subtitle(x.r)) + '</span></span>' +
+          '<span class="b-right"><span class="b-price">' + (x.l ? money.format(x.l.price) : "—") + '</span>' +
+            '<span class="b-delta ' + dCls + '">' + dTxt + '</span></span>' +
+        '</button>';
+      }).join("") + '</div>';
+  }
+
+  function logList(r) {
+    var qs = ordered(r).reverse();
+    var shown = showAllLog ? qs : qs.slice(0, 6);
+    if (!qs.length) return "";
+    return '<div class="sec-head"><h2>Every price recorded</h2>' +
+      '<span class="sec-note">' + qs.length + ' total</span></div>' +
+      '<div class="log">' + shown.map(function (q) {
+        var win = windowText(q);
+        var tag = q.sim ? '<span class="pill-tag grey">demo</span>'
+          : (q.source === "auto" ? '<span class="pill-tag">auto</span>'
+          : (q.source === "history" ? '<span class="pill-tag grey">google</span>' : ""));
+        return '<div class="log-row"><span><span class="log-a">' + esc(q.airline) + '</span>' + tag +
+          '<span class="log-b">' + esc(stamp.format(new Date(q.at))) +
+          (win ? " · for " + esc(win) : "") + '</span></span>' +
+          '<span class="log-p">' + money.format(q.price) + '</span></div>';
+      }).join("") + '</div>' +
+      (qs.length > 6 ? '<button class="more-btn" id="toggleLog">' +
+        (showAllLog ? "Show less" : "Show all " + qs.length) + '</button>' : "");
+  }
+
+  /// The Lowest Prices page: pick one route, see the ten cheapest fares this
+  /// app has recorded for it. Nothing from before tracking began appears here.
+  function renderLowest() {
+    if (!routes.length) {
+      viewEl.innerHTML = '<div class="empty"><h3>Nothing tracked yet</h3>' +
+        '<p>Add a route and its lowest prices will collect here.</p></div>';
+      return;
+    }
+
+    // Default to whichever route the Routes page is showing.
+    if (bestFilter === "all" || !routes.filter(function (r) { return r.id === bestFilter; }).length) {
+      bestFilter = (current() && current().id) || routes[0].id;
+    }
+    var r = routes.filter(function (x) { return x.id === bestFilter; })[0];
+
+    var picker = '<div class="picker"><label for="lowRoute">Route</label>' +
+      '<select id="lowRoute">' + routes.map(function (x) {
+        return '<option value="' + esc(x.id) + '"' + (x.id === r.id ? " selected" : "") + '>' +
+          esc(routeName(x)) + '</option>';
+      }).join("") + '</select></div>';
+
+    var lows = routeLows(r, 10);
+    var total = trackedCount(r);
+    var since = trackedSince(r);
+
+    if (!lows.length) {
+      viewEl.innerHTML = picker +
+        '<div class="empty"><h3>No prices recorded yet</h3>' +
+        '<p>Fares this app records for ' + esc(routeName(r)) +
+        ' will be ranked here, cheapest first.</p></div>';
+      return;
+    }
+
+    var summary = '<p class="hint" style="margin:-8px 0 12px">' + esc(subtitle(r)) + '</p>' +
+      '<div class="summary-line">' +
+      '<span><b>' + total + '</b> reading' + (total === 1 ? "" : "s") + ' recorded' +
+        (since ? " since " + esc(mDay.format(new Date(since))) : "") + '</span>' +
+      '<span>Lowest <b>' + money.format(lows[0].q.price) + '</b></span>' +
+    '</div>';
+
+    var rows = lows.map(function (f, i) {
+      return '<tr' + (i === 0 ? ' class="best"' : '') + '>' +
+        '<td><span class="medal' + (i < 3 ? " g" + (i + 1) : "") + '">' + (i + 1) + '</span></td>' +
+        '<td><div class="t-win">' + esc(f.q.winStart ? windowText(f.q) : subtitle(r)) + '</div>' +
+          '<div class="t-air">' + esc(f.q.airline) + '</div></td>' +
+        '<td><div class="t-seen">' + esc(mDay.format(new Date(f.q.at))) + '</div>' +
+          (f.count > 1 ? '<div class="t-held">held ' + f.count + '</div>' : '') + '</td>' +
+        '<td><a class="t-book" href="' + esc(bookingLink(r, f.q)) + '" target="_blank" rel="noopener">' +
+          '<span class="t-price">' + money.format(f.q.price) + '</span></a></td>' +
+      '</tr>';
+    }).join("");
+
+    viewEl.innerHTML = picker + summary +
+      '<div class="lows-wrap"><table class="lows">' +
+        '<thead><tr><th>#</th><th>Dates</th><th>Seen</th><th>Price</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table></div>' +
+      (lows.length < 10
+        ? '<p class="hint" style="margin:12px 0 0">Top ' + lows.length +
+          ' so far — the table fills to ten as tracking continues.</p>'
+        : "");
+  }
+
+  /// The History page: every reading for one route, newest first. Same data
+  /// as Lowest, ordered by when it was seen rather than by price — this is
+  /// the running log, that one is the ranking.
+  function renderHistory() {
+    if (!routes.length) {
+      viewEl.innerHTML = '<div class="empty"><h3>Nothing tracked yet</h3>' +
+        '<p>Add a route and every price recorded for it will be listed here.</p></div>';
+      return;
+    }
+
+    if (bestFilter === "all" || !routes.filter(function (r) { return r.id === bestFilter; }).length) {
+      bestFilter = (current() && current().id) || routes[0].id;
+    }
+    var r = routes.filter(function (x) { return x.id === bestFilter; })[0];
+
+    var picker = '<div class="picker"><label for="lowRoute">Route</label>' +
+      '<select id="lowRoute">' + routes.map(function (x) {
+        return '<option value="' + esc(x.id) + '"' + (x.id === r.id ? " selected" : "") + '>' +
+          esc(routeName(x)) + '</option>';
+      }).join("") + '</select></div>';
+
+    var qs = ordered(r).reverse();
+    if (!qs.length) {
+      viewEl.innerHTML = picker +
+        '<div class="empty"><h3>No readings yet</h3>' +
+        '<p>Every price recorded for ' + esc(routeName(r)) + ' will be listed here, newest first.</p></div>';
+      return;
+    }
+
+    var lo = Math.min.apply(null, qs.map(function (q) { return q.price; }));
+
+    var rows = qs.map(function (q, i) {
+      var nextQ = qs[i + 1];                       // the reading before this one
+      var diff = nextQ ? q.price - nextQ.price : null;
+      var diffTxt = diff === null ? '<span class="h-flat">first</span>'
+        : diff === 0 ? '<span class="h-flat">—</span>'
+        : '<span class="' + (diff < 0 ? "h-down" : "h-up") + '">' +
+          (diff < 0 ? "▼" : "▲") + money.format(Math.abs(diff)) + '</span>';
+      var tag = q.sim ? '<span class="pill-tag grey">demo</span>'
+        : q.source === "history" ? '<span class="pill-tag grey">google</span>'
+        : q.source === "logged" ? '<span class="pill-tag grey">by hand</span>'
+        : '<span class="pill-tag">auto</span>';
+
+      return '<tr' + (q.price === lo ? ' class="best"' : '') + '>' +
+        '<td><div class="t-seen">' + esc(stamp.format(new Date(q.at))) + '</div>' +
+          '<div class="t-held">' + diffTxt + '</div></td>' +
+        '<td><div class="t-win">' + esc(q.winStart ? windowText(q) : subtitle(r)) + '</div>' +
+          '<div class="t-air">' + esc(q.airline) + tag + '</div></td>' +
+        '<td><a class="t-book" href="' + esc(bookingLink(r, q)) + '" target="_blank" rel="noopener">' +
+          '<span class="t-price">' + money.format(q.price) + '</span></a></td>' +
+      '</tr>';
+    }).join("");
+
+    viewEl.innerHTML = picker +
+      '<p class="hint" style="margin:-8px 0 12px">' + esc(subtitle(r)) + '</p>' +
+      '<div class="summary-line">' +
+        '<span><b>' + qs.length + '</b> reading' + (qs.length === 1 ? "" : "s") + ', newest first</span>' +
+        '<span>Lowest <b>' + money.format(lo) + '</b></span>' +
+      '</div>' +
+      '<div class="lows-wrap"><table class="lows hist">' +
+        '<thead><tr><th>When</th><th>Dates</th><th>Price</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function render() {
+    if (page === "history") {
+      chipsEl.hidden = true;
+      renderHistory();
+      paintSyncAgo();
+      return;
+    }
+    if (page === "best") {
+      chipsEl.hidden = true;
+      renderLowest();
+      paintSyncAgo();
+      return;
+    }
+    renderChips();
+
+    if (!routes.length) {
+      viewEl.innerHTML = '<div class="empty"><h3>Nothing tracked yet</h3>' +
+        '<p>Add a route and Fare Watch will follow the cheapest fare it can find.</p>' +
+        '<button class="btn" id="emptyAdd">Track a route</button></div>';
+      return;
+    }
+
+    var r = current();
+    viewEl.innerHTML =
+      verdict() +
+      hero(r) +
+      digestRow() +
+      '<div class="sec-head"><h2>' + esc(routeName(r)) + '</h2>' +
+        '<span class="sec-note">' + esc(subtitle(r)) + '</span></div>' +
+      tiles(r) +
+      '<div class="chart-card">' + chart(r) + '</div>' +
+      windowRow(r) +
+      (latest(r)
+        ? '<a class="book-row" href="' + esc(bookingLink(r, latest(r))) + '" target="_blank" rel="noopener">' +
+          'Open this fare on Google Flights <span class="ext">↗</span></a>'
+        : "") +
+      targetRow(r) +
+      verdictRow(r) +
+      board() +
+      logList(r);
+
+    paintSyncAgo();
+  }
+
+  // ---------- sync ----------
+  function lastAuto() {
+    var n = 0;
+    routes.forEach(function (r) {
+      (r.quotes || []).forEach(function (q) { if (q.source === "auto" && q.at > n) n = q.at; });
+    });
+    return n;
+  }
+
+  function paintSync(on) {
+    syncEl.hidden = false;
+    syncEl.className = "sync " + (on ? "on" : "off");
+    syncText.innerHTML = on
+      ? "<b>Published fares.</b> Refreshed by the daily sweep."
+      : "<b>Offline.</b> Showing the last data this device loaded.";
+    paintSyncAgo();
+  }
+
+  function paintSyncAgo() {
+    var l = lastAuto();
+    syncAgo.textContent = l ? relative(l) : "";
+  }
+
+  function mergeRemote() {
+    if (!remoteRoutes) return;
+    routes = remoteRoutes.map(function (r) {
+      var c = {}; for (var k in r) c[k] = r[k];
+      c.quotes = ((remoteHistory && remoteHistory[r.id]) || []).slice();
+      c.quotes.sort(function (a, b) { return a.at - b.at; });
+      return c;
+    });
+    if (!routes.filter(function (r) { return r.id === selectedID; }).length) {
+      selectedID = routes.length ? routes[0].id : null;
+    }
+    save();
+    render();
+    paintSync(true);
+  }
+
+  /// Hosted build: the daily sweep publishes data.json next to this page, so
+  /// the app reads that instead of the artifact store. Anything you change
+  /// locally still lives in this browser and wins until the next publish.
+  function connectStore() {
+    fetch("data.json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.routes)) { paintSync(false); return; }
+        remoteRoutes = d.routes.map(function (r) {
+          return {
+            id: r.id, origin: r.origin, dest: r.dest, label: r.label || null,
+            mode: r.mode === "hunt" ? "hunt" : "watch",
+            duration: r.duration || 2, nonstop: !!r.nonstop,
+            arrivalId: r.arrivalId || r.dest,
+            depart: r.depart || null, ret: r.ret || null,
+            target: typeof r.target === "number" ? r.target : null
+          };
+        });
+        remoteHistory = d.history || {};
+        mergeRemote();
+      })
+      .catch(function () { paintSync(false); });
+  }
+
+  function pushRoute(r) {
+    if (!db) return;   // hosted build keeps edits local
+    db.doc("routes/" + r.id).set({
+      origin: r.origin, dest: r.dest, label: r.label || null,
+      mode: r.mode || "watch", duration: r.duration || 2, nonstop: !!r.nonstop,
+      arrivalId: r.arrivalId || r.dest,
+      depart: r.depart || null, ret: r.ret || null,
+      target: r.target == null ? null : r.target,
+      updatedAt: Date.now()
+    }).catch(noop);
+    db.doc("history/" + r.id).set({ routeId: r.id, quotes: r.quotes || [] }).catch(noop);
+  }
+  function pushHistory(r) {
+    if (!db) return;
+    db.doc("history/" + r.id).set({ routeId: r.id, quotes: r.quotes }).catch(noop);
+  }
+  function dropRoute(id) {
+    if (!db) return;
+    db.doc("routes/" + id).delete().catch(noop);
+    db.doc("history/" + id).delete().catch(noop);
+  }
+
+  // ---------- toast ----------
+  var toastEl = document.getElementById("toast"), toastT;
+  function toast(html) {
+    toastEl.innerHTML = html;
+    toastEl.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.classList.remove("show"); }, 3800);
+  }
+  function announce(r, price, wasLow) {
+    if (r.target && price <= r.target) {
+      toast("<b>" + esc(routeName(r)) + "</b> is under your target at <b>" + money.format(price) + "</b>");
+    } else if (wasLow) {
+      toast("<b>" + esc(routeName(r)) + "</b> hit a new low: <b>" + money.format(price) + "</b>");
+    }
+  }
+
+  // ---------- interactions ----------
+  function selectRoute(id) {
+    selectedID = id;
+    showAllLog = false;
+    try { localStorage.setItem(SEL_KEY, id); } catch (e) {}
+    render();
+  }
+
+  chipsEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (b) selectRoute(b.getAttribute("data-id"));
+  });
+
+  viewEl.addEventListener("change", function (e) {
+    if (e.target && e.target.id === "digestToggle") {
+      alerts.digest = e.target.checked;
+      if (db) db.doc("config/alerts").set({ digest: alerts.digest, updatedAt: Date.now() }).catch(noop);
+      toast(alerts.digest ? "Daily summary on." : "Daily summary off.");
+      return;
+    }
+    if (e.target && e.target.id === "lowRoute") {
+      bestFilter = e.target.value;
+      render();
+    }
+  });
+
+  viewEl.addEventListener("click", function (e) {
+
+    var row = e.target.closest(".board-row");
+    if (row) { selectRoute(row.getAttribute("data-id")); return; }
+    if (e.target.closest("#toggleLog")) { showAllLog = !showAllLog; render(); return; }
+    if (e.target.closest("#emptyAdd")) { openAdd(); }
+  });
+
+  function showSheet(el) { if (el.showModal) el.showModal(); else el.setAttribute("open", ""); }
+  function hideSheet(el) { if (el.close) el.close(); else el.removeAttribute("open"); }
+
+  // ---------- add route ----------
+  var addSheet = document.getElementById("addSheet"), addForm = document.getElementById("addForm");
+  var originIn = document.getElementById("f-origin"), destIn = document.getElementById("f-dest");
+  var departIn = document.getElementById("f-depart"), returnIn = document.getElementById("f-return");
+  var roundIn = document.getElementById("f-round"), returnField = document.getElementById("returnField");
+  var targetIn = document.getElementById("f-target"), submitAdd = document.getElementById("submitAdd");
+  var flexIn = document.getElementById("f-flex"), flexField = document.getElementById("flexField");
+  var nonstopRow = document.getElementById("nonstopRow"), nonstopIn = document.getElementById("f-nonstop");
+  var durationIn = document.getElementById("f-duration"), fixedDates = document.getElementById("fixedDates");
+
+  function paintAddMode() {
+    var flex = flexIn.checked;
+    flexField.hidden = !flex;
+    nonstopRow.hidden = !flex;
+    fixedDates.hidden = flex;
+  }
+
+  function openAdd() {
+    addForm.reset();
+    departIn.value = iso(Date.now() + 30 * DAY);
+    returnIn.value = iso(Date.now() + 37 * DAY);
+    departIn.min = iso(Date.now());
+    returnField.hidden = false;
+    paintAddMode();
+    validateAdd();
+    showSheet(addSheet);
+    setTimeout(function () { originIn.focus(); }, 70);
+  }
+
+  function iso(ms) { return new Date(ms).toISOString().slice(0, 10); }
+
+  document.getElementById("openAdd").addEventListener("click", openAdd);
+  document.getElementById("cancelAdd").addEventListener("click", function () { hideSheet(addSheet); });
+  flexIn.addEventListener("change", paintAddMode);
+  roundIn.addEventListener("change", function () { returnField.hidden = !roundIn.checked; });
+
+  [originIn, destIn].forEach(function (input) {
+    input.addEventListener("input", function () {
+      var clean = input.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+      if (clean !== input.value) input.value = clean;
+      validateAdd();
+    });
+  });
+
+  departIn.addEventListener("change", function () {
+    returnIn.min = departIn.value;
+    if (returnIn.value && returnIn.value < departIn.value) returnIn.value = departIn.value;
+  });
+
+  function validateAdd() {
+    var ok = originIn.value.length === 3 && destIn.value.length === 3 && originIn.value !== destIn.value;
+    submitAdd.disabled = !ok;
+    return ok;
+  }
+
+  addForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!validateAdd()) return;
+    var flex = flexIn.checked;
+    var r = {
+      id: "r" + Math.random().toString(36).slice(2, 9),
+      origin: originIn.value, dest: destIn.value,
+      mode: flex ? "hunt" : "watch",
+      duration: flex ? +durationIn.value : 2,
+      nonstop: flex ? nonstopIn.checked : false,
+      arrivalId: destIn.value,
+      depart: flex ? null : (departIn.value || iso(Date.now() + 30 * DAY)),
+      ret: flex ? null : (roundIn.checked && returnIn.value ? returnIn.value : null),
+      target: targetIn.value ? Math.round(+targetIn.value) : null,
+      quotes: []
+    };
+    routes.push(r);
+    selectedID = r.id;
+    save();
+    pushRoute(r);
+    hideSheet(addSheet);
+    render();
+    if (!flex) openLog(r.id);
+  });
+
+  // ---------- log price ----------
+  var logSheet = document.getElementById("logSheet"), logForm = document.getElementById("logForm");
+  var routePick = document.getElementById("routePick"), routeSel = document.getElementById("l-route");
+  var priceIn = document.getElementById("l-price"), airlineIn = document.getElementById("l-airline");
+  var dateIn = document.getElementById("l-date"), logLede = document.getElementById("logLede");
+
+  function openLog(id) {
+    if (!routes.length) { toast("Add a route first."); return; }
+    logForm.reset();
+    dateIn.value = iso(Date.now());
+    dateIn.max = iso(Date.now());
+    routeSel.innerHTML = routes.map(function (r) {
+      return '<option value="' + esc(r.id) + '">' + esc(routeName(r) + " · " + subtitle(r)) + "</option>";
+    }).join("");
+    routeSel.value = id || (current() && current().id) || routes[0].id;
+    routePick.hidden = routes.length < 2;
+    var r = routes.filter(function (x) { return x.id === routeSel.value; })[0];
+    logLede.textContent = r ? routeName(r) + " · " + subtitle(r) : "";
+    showSheet(logSheet);
+    setTimeout(function () { priceIn.focus(); }, 70);
+  }
+
+  routeSel.addEventListener("change", function () {
+    var r = routes.filter(function (x) { return x.id === routeSel.value; })[0];
+    logLede.textContent = r ? routeName(r) + " · " + subtitle(r) : "";
+  });
+
+  document.getElementById("cancelLog").addEventListener("click", function () { hideSheet(logSheet); });
+
+  logForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var price = Math.round(+priceIn.value);
+    if (!price || price <= 0) return;
+    var r = routes.filter(function (x) { return x.id === routeSel.value; })[0];
+    if (!r) return;
+    var prevLow = lowest(r);
+    var when = dateIn.value === iso(Date.now()) ? Date.now() : parseDay(dateIn.value).getTime();
+    r.quotes.push({
+      price: price,
+      airline: airlineIn.value.trim() || "Logged by hand",
+      at: when, sim: false, source: "logged"
+    });
+    r.quotes.sort(function (a, b) { return a.at - b.at; });
+    selectedID = r.id;
+    save();
+    pushHistory(r);
+    hideSheet(logSheet);
+    render();
+    announce(r, price, prevLow && price < prevLow.price);
+  });
+
+  // ---------- data ----------
+  var dataSheet = document.getElementById("dataSheet"), csvArea = document.getElementById("d-csv");
+  var importSheet = document.getElementById("importSheet"), importForm = document.getElementById("importForm");
+  var jsonArea = document.getElementById("i-json");
+
+  function toCSV() {
+    var lines = ["route,mode,depart,return,window_start,window_end,recorded_at,price,airline,source"];
+    routes.forEach(function (r) {
+      ordered(r).forEach(function (q) {
+        lines.push([
+          r.origin + "-" + r.dest, r.mode || "watch",
+          r.depart || "", r.ret || "", q.winStart || "", q.winEnd || "",
+          new Date(q.at).toISOString(), q.price,
+          String(q.airline).replace(/,/g, " "),
+          q.source || (q.sim ? "demo" : "logged")
+        ].join(","));
+      });
+    });
+    return lines.join("\n");
+  }
+
+  document.getElementById("openData").addEventListener("click", function () {
+    csvArea.value = toCSV();
+    showSheet(dataSheet);
+  });
+  document.getElementById("closeData").addEventListener("click", function () { hideSheet(dataSheet); });
+
+  function copyFrom(area, label) {
+    area.select();
+    area.setSelectionRange(0, area.value.length);
+    var done = false;
+    try { done = document.execCommand("copy"); } catch (e) {}
+    if (!done && navigator.clipboard) {
+      navigator.clipboard.writeText(area.value).then(
+        function () { toast(label + " copied."); },
+        function () { toast("Select the text and copy it manually."); }
+      );
+      return;
+    }
+    toast(done ? label + " copied." : "Select the text and copy it manually.");
+  }
+
+  document.getElementById("copyCSV").addEventListener("click", function () { copyFrom(csvArea, "CSV"); });
+  document.getElementById("copyJSON").addEventListener("click", function () { copyFrom(jsonArea, "Backup"); });
+  document.getElementById("openImport").addEventListener("click", function () {
+    jsonArea.value = JSON.stringify(routes);
+    hideSheet(dataSheet);
+    showSheet(importSheet);
+  });
+  document.getElementById("cancelImport").addEventListener("click", function () { hideSheet(importSheet); });
+
+  importForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var parsed;
+    try { parsed = JSON.parse(jsonArea.value); }
+    catch (err) { toast("That is not valid JSON — paste the whole backup."); return; }
+    if (!Array.isArray(parsed) || !parsed.every(function (r) { return r && r.origin && r.dest && Array.isArray(r.quotes); })) {
+      toast("That JSON is not a Fare Watch backup."); return;
+    }
+    routes = parsed;
+    selectedID = routes.length ? routes[0].id : null;
+    save();
+    routes.forEach(pushRoute);
+    hideSheet(importSheet);
+    render();
+    toast("Restored " + routes.length + " route" + (routes.length === 1 ? "" : "s") + ".");
+  });
+
+  // ---------- dock ----------
+  var tabs = [
+    document.getElementById("tabRoutes"),
+    document.getElementById("tabBest"),
+    document.getElementById("tabHistory"),
+    document.getElementById("tabLog")
+  ];
+  function setTab(i) { tabs.forEach(function (t, j) { t.classList.toggle("on", i === j); }); }
+
+  function goTop() {
+    var el = viewEl.querySelector(".hero") || viewEl;
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  tabs[0].addEventListener("click", function () {
+    page = "routes"; setTab(0); render(); goTop();
+  });
+  tabs[1].addEventListener("click", function () {
+    page = "best"; setTab(1);
+    bestFilter = (current() && current().id) || bestFilter;
+    render(); goTop();
+  });
+  tabs[2].addEventListener("click", function () {
+    page = "history"; setTab(2);
+    bestFilter = (current() && current().id) || bestFilter;
+    render(); goTop();
+  });
+  tabs[3].addEventListener("click", function () {
+    openLog(current() && current().id);
+  });
+
+  render();
+  connectStore();
+})();
+</script>
+
+</body>
+</html>

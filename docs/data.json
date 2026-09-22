@@ -1,0 +1,177 @@
+{
+ "updatedAt": 1789877925851,
+ "routes": [
+  {
+   "id": "sfo-ord",
+   "origin": "SFO",
+   "dest": "ORD",
+   "label": "Chicago O'Hare",
+   "mode": "hunt",
+   "duration": 2,
+   "nonstop": true,
+   "arrivalId": "ORD",
+   "depart": null,
+   "ret": null,
+   "target": 200
+  },
+  {
+   "id": "sfo-cun",
+   "origin": "SFO",
+   "dest": "CUN",
+   "label": "Cancun",
+   "mode": "hunt",
+   "duration": 2,
+   "nonstop": true,
+   "arrivalId": "CUN",
+   "depart": null,
+   "ret": null,
+   "target": 200
+  },
+  {
+   "id": "sfo-lon",
+   "origin": "SFO",
+   "dest": "LON",
+   "label": "London (all airports)",
+   "mode": "hunt",
+   "duration": 2,
+   "nonstop": true,
+   "arrivalId": "/m/04jpl",
+   "depart": null,
+   "ret": null,
+   "target": 200
+  },
+  {
+   "id": "sfo-hnl",
+   "origin": "SFO",
+   "dest": "HNL",
+   "label": "Honolulu",
+   "mode": "hunt",
+   "duration": 2,
+   "nonstop": true,
+   "arrivalId": "HNL",
+   "depart": null,
+   "ret": null,
+   "target": 200
+  }
+ ],
+ "history": {
+  "sfo-cun": [
+   {
+    "airline": "United",
+    "at": 1789541533179,
+    "into": "CUN",
+    "price": 377,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2027-02-09",
+    "winStart": "2027-01-31"
+   },
+   {
+    "airline": "United",
+    "at": 1789610995798,
+    "into": "CUN",
+    "price": 377,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2027-02-09",
+    "winStart": "2027-01-31"
+   },
+   {
+    "airline": "United",
+    "at": 1789710771625,
+    "into": "CUN",
+    "price": 497,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2027-02-09",
+    "winStart": "2027-02-01"
+   }
+  ],
+  "sfo-hnl": [
+   {
+    "airline": "Alaska",
+    "at": 1789710771625,
+    "into": "HNL",
+    "price": 233,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2026-11-18",
+    "winStart": "2026-11-12"
+   }
+  ],
+  "sfo-lon": [
+   {
+    "airline": "Virgin Atlantic",
+    "at": 1789541533179,
+    "into": "LHR",
+    "price": 731,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2026-11-03",
+    "winStart": "2026-10-25"
+   },
+   {
+    "airline": "Virgin Atlantic",
+    "at": 1789610995798,
+    "into": "LHR",
+    "price": 731,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2026-11-03",
+    "winStart": "2026-10-25"
+   },
+   {
+    "airline": "United",
+    "at": 1789710771625,
+    "into": "LHR",
+    "price": 744,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2027-03-02",
+    "winStart": "2027-02-21"
+   }
+  ],
+  "sfo-ord": [
+   {
+    "airline": "American",
+    "at": 1789541533179,
+    "into": "ORD",
+    "price": 231,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2026-10-31",
+    "winStart": "2026-10-24"
+   },
+   {
+    "airline": "United",
+    "at": 1789610995798,
+    "into": "ORD",
+    "price": 231,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2026-10-24",
+    "winStart": "2026-10-17"
+   },
+   {
+    "airline": "United",
+    "at": 1789710771625,
+    "into": "ORD",
+    "price": 337,
+    "sim": false,
+    "source": "auto",
+    "stops": 0,
+    "winEnd": "2027-02-06",
+    "winStart": "2027-01-30"
+   }
+  ]
+ }
+}
