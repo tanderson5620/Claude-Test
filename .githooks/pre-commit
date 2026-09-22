@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Block commits that carry credentials.
+
+Runs on every `git commit` and scans only what is staged. Exits non-zero to
+abort the commit, naming the file and line but never printing the secret.
+"""
+import re
+import subprocess
+import sys
+
+# Patterns are anchored on shapes that are almost never anything else.
+PATTERNS = [
+    ("AWS access key id",      re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("GitHub token",           re.compile(r"\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})\b")),
+    ("OpenAI key",             re.compile(r"\bsk-[A-Za-z0-9]{32,}\b")),
+    ("Anthropic key",          re.compile(r"\bsk-ant-[A-Za-z0-9\-_]{20,}\b")),
+    ("Google API key",         re.compile(r"\bAIza[0-9A-Za-z\-_]{35}\b")),
+    ("Slack token",            re.compile(r"\bxox[baprs]-[A-Za-z0-9\-]{10,}\b")),
+    ("Stripe live key",        re.compile(r"\b[sr]k_live_[A-Za-z0-9]{16,}\b")),
+    ("Twilio SID",             re.compile(r"\bAC[0-9a-fA-F]{32}\b")),
+    ("SendGrid key",           re.compile(r"\bSG\.[A-Za-z0-9_\-]{16,}\.[A-Za-z0-9_\-]{16,}\b")),
+    ("private key block",      re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("JSON web token",         re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.")),
+    # SerpAPI and friends: a bare 64-char hex blob is a key far more often than data.
+    ("64-char hex secret",     re.compile(r"(?<![A-Fa-f0-9])[A-Fa-f0-9]{64}(?![A-Fa-f0-9])")),
+    # Anything assigned to a credential-shaped name.
+    ("credential assignment",  re.compile(
+        r"(?i)\b(api[_-]?key|apikey|secret|password|passwd|auth[_-]?token|access[_-]?token|client[_-]?secret)"
+        r"\s*[:=]\s*[\"'][^\"'\s]{12,}[\"']")),
+]
+
+# Files that are secrets by their very name.
+RISKY_NAMES = re.compile(
+    r"(^|/)(\.env(\..*)?|id_rsa|id_dsa|id_ecdsa|id_ed25519|\.npmrc|\.pypirc|"
+    r".*\.pem|.*\.p12|.*\.pfx|.*\.keystore|credentials(\.json)?|service[-_]account.*\.json)$",
+    re.IGNORECASE)
+
+# Lines carrying these are documentation or a deliberate placeholder.
+ALLOW = re.compile(r"(?i)(PASTE_YOUR|YOUR_[A-Z_]*KEY|<[a-z_ ]*key[a-z_ ]*>|xxxx|example|placeholder|dummy|redacted|\$\{?[A-Z_]+\}?)")
+
+BINARY = re.compile(rb"\x00")
+
+
+def staged_files():
+    out = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
+                         capture_output=True, text=True).stdout
+    return [f for f in out.splitlines() if f.strip()]
+
+
+def staged_blob(path):
+    r = subprocess.run(["git", "show", ":" + path], capture_output=True)
+    return r.stdout if r.returncode == 0 else b""
+
+
+def main():
+    findings = []
+
+    for path in staged_files():
+        if RISKY_NAMES.search(path):
+            findings.append((path, 0, "file name suggests a credential file", ""))
+            continue
+
+        blob = staged_blob(path)
+        if not blob or BINARY.search(blob[:8192]):
+            continue
+
+        try:
+            text = blob.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+
+        for n, line in enumerate(text.splitlines(), 1):
+            if len(line) > 4000 or ALLOW.search(line):
+                continue
+            for label, rx in PATTERNS:
+                m = rx.search(line)
+                if m:
+                    hit = m.group(0)
+                    shown = hit[:4] + "…" + hit[-2:] if len(hit) > 10 else "…"
+                    findings.append((path, n, label, shown))
+                    break
+
+    if not findings:
+        return 0
+
+    print("\n\033[1;31mCOMMIT BLOCKED — possible credential in staged changes\033[0m\n")
+    for path, line, label, shown in findings:
+        where = "%s:%d" % (path, line) if line else path
+        print("  %-42s %s %s" % (where, label, ("(" + shown + ")") if shown else ""))
+    print("""
+If this is a real credential:
+  1. Remove it from the file and commit again.
+  2. Put it in an environment variable or a secret store instead.
+  3. If it was ever pushed, ROTATE IT. Deleting the commit does not help —
+     the history keeps it and scanners have already read it.
+
+If this is a false positive, the safest fix is to reword the line (a
+placeholder like YOUR_API_KEY is recognised and allowed).
+
+To override anyway:  git commit --no-verify
+Only do that when you are certain. This hook is the last thing standing
+between a key and a public repository.
+""")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
