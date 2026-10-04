@@ -57,7 +57,10 @@ The content stays wholesome and non-sexual. Keep it that way.
 Both characters are built with `buildPerson(opts)`: a hierarchical rig of hips, thighs, knees, spine, shoulders, elbows and head. `limbGeo()` makes capsule-like lathe limbs and `torsoGeo()` makes lathe torsos. `buildFace()` adds eyes (sclera, iris, pupil, glint, blinking eyelid), nose, ears, brows, lips and a hidden mouth opening.
 
 - **Glaze:** an original character, the love interest. She wears a pink jacket and jeans, with a hair bun and gold hoops. She faces the player, breathes, blinks, hops on good gifts and cheers when you win. Her blush opacity tracks affection.
-- **Rimshot:** an original basketball player, teal #77 jersey. He isn't modeled on any real person; keep it that way. He dribbles in endless circles around the player at a radius of 2.8 m and about 4.2 m/s. Every 5 laps he runs this state machine (`RS.mode`):
+- **Rimshot:** an original basketball player, teal #77 jersey. He isn't modeled on any real person; keep it that way.
+  - Built by `buildAthlete()`, not `buildPerson()`: an 18-bone `THREE.Skeleton` drives `SkinnedMesh`es for the skin, jersey, shorts and a compression sleeve (r128 materials need `skinning: true`). Limbs and torso are sculpted ring grids (`skinGrid()`) with muscle bumps and blended joint weights.
+  - The head is a sculpted grid (`headPoint()`), split along the mouth line so a jaw bone can open it. It has teeth, a tongue, textured eyeballs that track the player, blinking eyelids, eyebrows, ears, a fade haircut and a headband. Hands (jointed fingers, nails) and sneakers are rigid parts on their bones.
+  - Skin uses procedural color and pore normal maps. The jersey neck and arm holes are cut with an alpha mask. He is about 59k triangles. He dribbles in endless circles around the player at a radius of 2.8 m and about 4.2 m/s. Every 5 laps he runs this state machine (`RS.mode`):
   - `run`: circles the player for 5 laps.
   - `approach`: jogs to 1.4 m in front of where the player is looking.
   - `stare`: about 2.4 s, wide eyes, head tracks the player.
