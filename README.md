@@ -6,6 +6,7 @@ A WebXR game for Meta Quest 2, built as one self-contained HTML file (`donut-tow
 - **Single file.** All HTML, CSS and JS live in `donut-town-vr.html`. There are no build step, no bundler and no local assets.
 - **three.js r128** is loaded as a UMD script from `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`. ES-module imports and examples/jsm addons aren't used; VRButton, controller models and BufferGeometryUtils are hand-rolled instead.
 - **All textures are procedural**, drawn to `<canvas>` and wrapped with `CanvasTexture` through the `canvasTex()` helper. There are no image files.
+  - Exception: Rimshot's baked body mesh and normal/AO maps are generated offline by `tools/rimshot/` (Blender as a Python module) and embedded as JSON in the `RIMSHOT-DATA` block near the top of the HTML. If that block is missing or broken, the game falls back to the procedural body.
 - **Quest 2 performance budget:**
   - Lambert materials are used for the environment; Standard is used only for characters, turtles and donuts.
   - Repeated objects (pines, rocks, grass tufts, flowers) use `InstancedMesh` with `frustumCulled = false`.
@@ -91,6 +92,12 @@ Both characters are built with `buildPerson(opts)`: a hierarchical rig of hips, 
 10. Speech bubble, gift board, audio, game state (`S`, `reset`, `buy`, `give`)
 11. HUD, flying donuts, particles, controllers, desktop input, movement and collisions
 12. Start buttons and the main `setAnimationLoop`
+
+## Rebuilding Rimshot's baked data
+From `tools/rimshot/`, with Playwright and `pip install bpy==4.2.0 numpy pillow` (Python 3.11):
+1. `node export_src.js`: dumps his rest-pose geometry and skin weights from the page to `rim_src.json` (paths inside assume the repo root and a local three.js; adjust them for your setup).
+2. `python bake.py rim_src.json bake_out`: voxel-remeshes body and hands into one seamless sculpt, adds veins, wrinkles and folds, decimates to a 34k-triangle game mesh, transfers weights and bakes normal + AO maps (about 90 s on 4 cores).
+3. `python embed.py bake_out ../../donut-town-vr.html`: writes the data block into the game.
 
 ## Testing
 There's no browser in CI. Syntax-check by extracting the inline script and running `node --check`. A useful smoke test mocks `THREE` and `document` with deep Proxies, runs the script, then calls the animation loop a few hundred times. That catches reference and runtime errors in setup and per-frame code.
